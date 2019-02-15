@@ -9,7 +9,10 @@ CONFIG_DEFAULTS = {
     'redis_addr': None,
     # If omitted, fetch all fields
     'replication.sql_source.fields': [],
-    'replication.kafka_target.brokers': ['localhost:9092']
+    # If omitted, fetch all rows past the last committed offset
+    'replication.sql_source.limit': None,
+    # If omitted, assume Kafka brokers on the local machine listening on the default port
+    'replication.kafka_target.brokers': ['localhost:9092'],
 }
 
 
@@ -41,6 +44,14 @@ class Config(object):
         self.config = yaml.load(open(path))
 
         self._validate()
+
+    def __repr__(self):
+        """
+        Get a representation of this configuration.
+
+        :return: Representation of the underlying YAML.
+        """
+        return repr(self.config)
 
     def get(self, node):
         """
@@ -81,6 +92,7 @@ class Config(object):
 
         required_nodes = [
             'name',
+            'replication.poll_interval_sec',
             'replication.sql_source.uri',
             'replication.sql_source.table',
             'replication.sql_source.primary_key',
