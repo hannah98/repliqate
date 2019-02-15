@@ -148,7 +148,7 @@ class ReplicationDaemon(object):
 
         self.logger.debug('serializing messages from fetched rows: num_rows={}'.format(len(rows)))
         messages = [
-            Message(self.sql_table, row).serialize()
+            Message(self.name, self.sql_table, row).serialize()
             for row in rows
         ]
 

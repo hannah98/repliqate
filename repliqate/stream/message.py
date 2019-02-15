@@ -8,14 +8,16 @@ class Message(object):
     Abstraction describing a Kafka message.
     """
 
-    def __init__(self, table, data):
+    def __init__(self, name, table, data):
         """
         Create a message.
 
+        :param name: Name of the replication job.
         :param table: Name of the table.
         :param data: JSON-serializable row data.
         """
         self.timestamp = time.time()
+        self.name = name
         self.table = table
         self.data = data
 
@@ -28,6 +30,8 @@ class Message(object):
         return json.dumps({
             # Timestamp at which the message was created by repliqate
             'timestamp': self.timestamp,
+            # Name of the replication job
+            'name': self.name,
             # Name of the source SQL table
             'table': self.table,
             # Row data serialized as JSON-ish
