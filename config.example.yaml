@@ -1,0 +1,19 @@
+repliqate:
+  name: processes
+  statsd_addr: localhost:8125
+  redis_addr: localhost:6379
+  replication:
+    poll_interval_sec: 10
+    sql_source:
+      uri: sqlite:////tmp/sysmetrics.db
+      table: processes
+      primary_key: id
+      fields:
+        - pid
+        - name
+        - user
+        - command
+    kafka_target:
+      topic: repliqate-processes
+      brokers:
+        - 127.0.0.1:9092
