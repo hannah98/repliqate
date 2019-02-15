@@ -3,8 +3,11 @@ import yaml
 # Map of node expressions to reasonably sane default values for some configuration directives.
 # Required configuration directives are deliberately omitted.
 CONFIG_DEFAULTS = {
-    'statsd_addr': 'localhost:8125',
-    'redis_addr': 'localhost:6379',
+    # If omitted, don't report metrics
+    'statsd_addr': None,
+    # If omitted, retain state in-memory
+    'redis_addr': None,
+    # If omitted, fetch all fields
     'replication.sql_source.fields': [],
     'replication.kafka_target.brokers': ['localhost:9092']
 }
