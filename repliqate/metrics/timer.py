@@ -33,7 +33,7 @@ class ExecutionTimer(object):
         """
         Create a timer factory.
         """
-        self.duration = -1
+        self.last_duration = -1
 
     def duration(self):
         """
@@ -41,7 +41,7 @@ class ExecutionTimer(object):
 
         :return: Recorded duration of the most recent completed timer if available; -1 otherwise.
         """
-        return self.duration
+        return self.last_duration
 
     def timer(self):
         """
@@ -50,6 +50,6 @@ class ExecutionTimer(object):
         :return: Context manager instance.
         """
         def callback(duration):
-            self.duration = duration
+            self.last_duration = duration
 
         return DurationTimerContextManager(callback)
