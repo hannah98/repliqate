@@ -26,9 +26,13 @@ class Message(object):
         :return: Serialized message bytes.
         """
         return json.dumps({
+            # Timestamp at which the message was created by repliqate
             'timestamp': self.timestamp,
+            # Name of the source SQL table
             'table': self.table,
+            # Row data serialized as JSON-ish
             'data': dict(self.data),
+            # Unique hash of the fetched data
             'hash': self._data_hash(),
         })
 
