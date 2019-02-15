@@ -148,18 +148,18 @@ class ReplicationDaemon(object):
 
         self.logger.debug('serializing messages from fetched rows: num_rows={}'.format(len(rows)))
         messages = [
-            Message(self.name, self.sql_table, row).serialize()
+            Message(self.name, self.sql_table, row)
             for row in rows
         ]
 
         for message in messages:
-            next_offset = rows[-1][self.sql_primary_key]
+            next_offset = message.data[self.sql_primary_key]
 
             try:
                 self.logger.debug('publishing message: message={}'.format(message))
 
                 with exec_timer.timer():
-                    self.stream.publish(message)
+                    self.stream.publish(message.serialize())
 
                 self.metrics.emit_kafka_publish(
                     success=True,
