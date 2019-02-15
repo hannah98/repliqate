@@ -9,6 +9,27 @@ from repliqate.stream.message import Message
 from repliqate.stream.producer import StreamProducerClient
 
 
+def offset_contention_resolution(primary, secondary):
+    """
+    In event of a read conflict, always use the latest offset so to minimize re-publishing messages
+    that have already been published.
+
+    :param primary: Value read from the primary datastore.
+    :param secondary: Value read from the secondary datastore.
+    :return: The greater of the two values.
+    """
+    if primary is None:
+        return secondary
+
+    if secondary is None:
+        return primary
+
+    if int(primary) > int(secondary):
+        return primary
+
+    return secondary
+
+
 class ReplicationDaemon(object):
     """
     Daemon for periodically executing the main replication routine.
@@ -38,6 +59,7 @@ class ReplicationDaemon(object):
         self.kv = KeyValueStoreClient(
             addr=config.get('redis_addr'),
             prefix='repliqate',
+            contention_resolution=offset_contention_resolution,
         )
         self.stream = StreamProducerClient(
             brokers=config.get('replication.kafka_target.brokers'),
