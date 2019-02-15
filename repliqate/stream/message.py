@@ -21,6 +21,19 @@ class Message(object):
         self.table = table
         self.data = data
 
+    def __repr__(self):
+        """
+        Generate a human-consumable representation of this message.
+
+        :return: String representing this message object.
+        """
+        return 'Message(timestamp={}, name={}, table={}, data={})'.format(
+            self.timestamp,
+            self.name,
+            self.table,
+            dict(self.data),
+        )
+
     def serialize(self):
         """
         Serialize the message into bytes for shipment to Kafka.
