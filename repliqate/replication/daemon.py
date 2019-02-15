@@ -5,6 +5,7 @@ from repliqate.db.kv import KeyValueStoreClient
 from repliqate.db.sql import SQLDBClient
 from repliqate.metrics.hook import NoopMetricsHook
 from repliqate.metrics.hook import StatsdMetricsHook
+from repliqate.metrics.timer import ExecutionTimer
 from repliqate.stream.message import Message
 from repliqate.stream.producer import StreamProducerClient
 
@@ -50,6 +51,7 @@ class ReplicationDaemon(object):
         self.sql_primary_key = config.get('replication.sql_source.primary_key')
         self.sql_fields = config.get('replication.sql_source.fields')
         self.sql_limit = config.get('replication.sql_source.limit')
+        self.kafka_topic = config.get('replication.kafka_target.topic')
 
         # Clients
         self.db = SQLDBClient(
@@ -63,7 +65,7 @@ class ReplicationDaemon(object):
         )
         self.stream = StreamProducerClient(
             brokers=config.get('replication.kafka_target.brokers'),
-            topic=config.get('replication.kafka_target.topic'),
+            topic=self.kafka_topic,
         )
 
         statsd_addr = config.get('statsd_addr')
@@ -105,28 +107,44 @@ class ReplicationDaemon(object):
         """
         Execute a single iteration of the replication routine.
         """
+        exec_timer = ExecutionTimer()
         kv_closure = self.kv.closure(
             namespace='replication',
             key='offset',
             tags={'name': self.name},
         )
 
-        offset = kv_closure.get() or 0
+        with exec_timer.timer():
+            offset = kv_closure.get() or 0
+        self.metrics.emit_store_read(success=True, duration=exec_timer.duration())
 
         try:
             self.logger.debug('querying source with primary key offset: offset={}'.format(offset))
-            rows = self.db.query(
-                fields=[self.db.field(field) for field in self.sql_fields],
-                criteria=self.db.field(self.sql_primary_key) > offset,
-                limit=self.sql_limit,
+
+            with exec_timer.timer():
+                rows = self.db.query(
+                    fields=[self.db.field(field) for field in self.sql_fields],
+                    criteria=self.db.field(self.sql_primary_key) > offset,
+                    limit=self.sql_limit,
+                )
+
+            self.metrics.emit_sql_read(
+                success=True,
+                table=self.sql_table,
+                num_rows=len(rows),
+                duration=exec_timer.duration(),
             )
         except Exception as e:
             self.logger.error('sql source read failure: exception={}'.format(e))
-            return
+            return self.metrics.emit_sql_read(
+                success=False,
+                table=self.sql_table,
+                num_rows=0,
+                duration=exec_timer.duration(),
+            )
 
         if not rows:
-            self.logger.debug('no new rows since last fetch; aborting')
-            return
+            return self.logger.debug('no new rows since last fetch; aborting')
 
         self.logger.debug('serializing messages from fetched rows: num_rows={}'.format(len(rows)))
         messages = [
@@ -139,13 +157,27 @@ class ReplicationDaemon(object):
 
             try:
                 self.logger.debug('publishing message: message={}'.format(message))
-                self.stream.publish(message)
+
+                with exec_timer.timer():
+                    self.stream.publish(message)
+
+                self.metrics.emit_kafka_publish(
+                    success=True,
+                    topic=self.kafka_topic,
+                    duration=exec_timer.duration(),
+                )
             except Exception as e:
                 self.logger.error('kafka publication failure: exception={}'.format(e))
                 self.logger.error(
                     'aborting current replication; future replication may reproduce this message',
                 )
-                return
+                return self.metrics.emit_kafka_publish(
+                    success=False,
+                    topic=self.kafka_topic,
+                    duration=exec_timer.duration(),
+                )
 
             self.logger.debug('storing next primary key offset: offset={}'.format(next_offset))
-            kv_closure.set(next_offset)
+            with exec_timer.timer():
+                kv_closure.set(next_offset)
+            self.metrics.emit_store_write(success=True, duration=exec_timer.duration())
