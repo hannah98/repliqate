@@ -1,0 +1,59 @@
+pipeline {
+    agent {
+        dockerfile {
+            dir '.ci'
+            label 'docker-executor'
+        }
+    }
+
+    options {
+        withAWS(
+            endpointUrl: 'https://storage.kevinlin.info',
+            credentials: 'storage-internal',
+        )
+    }
+
+    stages {
+        stage('Environment') {
+            steps {
+                s3Download(
+                    bucket: 'internal',
+                    path: 'resources/repliqate/config.yaml',
+                    file: 'config.yaml',
+                )
+            }
+        }
+        stage('Install') {
+            steps {
+                sh 'virtualenv --always-copy env'
+                sh '. env/bin/activate && make bootstrap'
+            }
+        }
+        stage('Test') {
+            parallel {
+                stage('Lint') {
+                    steps {
+                        sh '. env/bin/activate && make lint'
+                    }
+                }
+                stage('Unit') {
+                    steps {
+                        sh 'exit 0'
+                    }
+                }
+            }
+        }
+        stage('Release') {
+            steps {
+                sh '. env/bin/activate && python setup.py install'
+                sh 'virtualenv --relocatable env'
+                sh 'tar -czf release.tar.gz *'
+                s3Upload(
+                    bucket: 'internal',
+                    path: "deploy/${env.JOB_NAME}/${env.GIT_COMMIT}/",
+                    file: 'release.tar.gz',
+                )
+            }
+        }
+    }
+}
