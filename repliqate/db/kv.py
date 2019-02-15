@@ -45,7 +45,7 @@ class MemoryCache(object):
         :param value: Associated value.
         """
         with self.lock:
-            self.store[key] = value
+            self.store[key] = str(value)
 
     def delete(self, key):
         """
@@ -64,14 +64,17 @@ class RedisProxyClient(object):
     Redis fails or is otherwise unavailable, to provide additional resiliency.
     """
 
-    def __init__(self, addr):
+    def __init__(self, addr, contention_resolution):
         """
         Create a RedisProxyClient.
 
         :param addr: Address to the Redis cluster.
+        :param contention_resolution: Function expressing how to resolve conflicts on read
+                                      inconsistencies between the primary and failover clients.
         """
         ip, port = addr.split(':')
 
+        self.contention_resolution = contention_resolution or (lambda primary, secondary: primary)
         self.memory = MemoryCache()
         self.redis = redis.Redis(
             host=ip,
@@ -86,7 +89,15 @@ class RedisProxyClient(object):
         :return: Associated value.
         """
         try:
-            return self.redis.get(key)
+            redis_val = self.redis.get(key)
+            mem_val = self.memory.get(key)
+
+            if redis_val != mem_val:
+                resolved_val = self.contention_resolution(redis_val, mem_val)
+                self.set(key, resolved_val)
+                return resolved_val
+
+            return redis_val
         except (ConnectionError, TimeoutError):
             return self.memory.get(key)
 
@@ -126,17 +137,19 @@ class KeyValueStoreClient(object):
     Caching abstractions on top of a key value storage system.
     """
 
-    def __init__(self, addr, prefix):
+    def __init__(self, addr, prefix, contention_resolution=None):
         """
         Create a key value store client with a Redis backend.
 
         :param addr: Address of the Redis cluster.
         :param prefix: String prefix for all inserted cache keys.
+        :param contention_resolution: Function expressing how to resolve conflicts on read
+                                      inconsistencies between the primary and failover clients.
         """
         self.prefix = prefix
 
         if addr:
-            self.backend = RedisProxyClient(addr)
+            self.backend = RedisProxyClient(addr, contention_resolution)
         else:
             self.backend = MemoryCache()
 
