@@ -4,4 +4,7 @@ bootstrap:
 lint:
 	flake8 repliqate
 
-.PHONY: bootstrap lint
+build:
+	python setup.py install
+
+.PHONY: bootstrap lint build

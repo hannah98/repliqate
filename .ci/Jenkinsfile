@@ -45,7 +45,7 @@ pipeline {
         }
         stage('Release') {
             steps {
-                sh '. env/bin/activate && python setup.py install'
+                sh '. env/bin/activate && make build'
                 sh 'virtualenv --relocatable env'
                 sh 'tar -czf release.tar.gz *'
                 s3Upload(
