@@ -1,0 +1,91 @@
+import yaml
+
+# Map of node expressions to reasonably sane default values for some configuration directives.
+# Required configuration directives are deliberately omitted.
+CONFIG_DEFAULTS = {
+    'statsd_addr': 'localhost:8125',
+    'redis_addr': 'localhost:6379',
+    'replication.sql_source.fields': [],
+    'replication.kafka_target.brokers': ['localhost:9092']
+}
+
+
+class InvalidConfigException(Exception):
+    """
+    Raised when the supplied configuration is invalid.
+    """
+    pass
+
+
+class InvalidConfigDirectiveException(Exception):
+    """
+    Raised when attempting to access a property that does not exist.
+    """
+    pass
+
+
+class Config(object):
+    """
+    Object describing a configuration file.
+    """
+
+    def __init__(self, path):
+        """
+        Initialize and validate a configuration file.
+
+        :param path: Path to the YAML configuration.
+        """
+        self.config = yaml.load(open(path))
+
+        self._validate()
+
+    def get(self, node):
+        """
+        Read the value of a configuration directive by its node expression. Nodes are described
+        hierarchically, delimited with a dot.
+
+        :param node: Node expression for the directive.
+        :return: Value at the specified node (may be a dict, list, or literal primitive) if it
+                 exists. Returns a default value if specified; otherwise raises an exception.
+        """
+        def lookup(config, path):
+            if not path:
+                return config
+
+            current = path[0]
+            rest = path[1:]
+
+            if current not in config:
+                raise InvalidConfigDirectiveException('Node `{}` does not exist.'.format(current))
+
+            return lookup(config[current], rest)
+
+        try:
+            return lookup(self.config['repliqate'], node.split('.'))
+        except InvalidConfigDirectiveException:
+            if node not in CONFIG_DEFAULTS:
+                raise
+
+            return CONFIG_DEFAULTS[node]
+
+    def _validate(self):
+        """
+        Validate the supplied configuration. Raises an exception if it is found to be invalid;
+        noops otherwise.
+        """
+        if 'repliqate' not in self.config:
+            raise InvalidConfigException('Top-level `repliqate` node missing.')
+
+        required_nodes = [
+            'name',
+            'replication.sql_source.uri',
+            'replication.sql_source.table',
+            'replication.sql_source.primary_key',
+            'replication.kafka_target.topic',
+        ]
+
+        for node in required_nodes:
+            try:
+                self.get(node)
+            except InvalidConfigDirectiveException:
+                raise InvalidConfigException('Required node `{}` missing.'.format(node))
