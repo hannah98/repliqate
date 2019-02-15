@@ -111,7 +111,7 @@ class ReplicationDaemon(object):
         kv_closure = self.kv.closure(
             namespace='replication',
             key='offset',
-            tags={'name': self.name},
+            tags={'name': self.name, 'table': self.sql_table, 'topic': self.kafka_topic},
         )
 
         with exec_timer.timer():
