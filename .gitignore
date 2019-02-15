@@ -1,1 +1,11 @@
+# Configuration
+config.yaml
+
+# Build artifacts
+build/
+dist/
+repliqate.egg-info/
+
+# Runtime artifacts
+env/
 *.pyc
