@@ -1,0 +1,17 @@
+# systemd service for daemonizing repliqate.
+# Edit the parameters as necessary before installing.
+
+[Unit]
+Description=repliqate
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+WorkingDirectory=/path/to/repliqate
+ExecStart=/bin/bash -c "./env/bin/repliqate --config config.yaml -vv"
+
+[Install]
+WantedBy=multi-user.target
