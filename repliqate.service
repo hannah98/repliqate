@@ -10,6 +10,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
+SyslogIdentifier=repliqate
 WorkingDirectory=/path/to/repliqate
 ExecStart=/bin/bash -c "./env/bin/repliqate --config config.yaml -vv"
 
