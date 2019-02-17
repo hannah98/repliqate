@@ -8,15 +8,16 @@ class Message(object):
     Abstraction describing a Kafka message.
     """
 
-    def __init__(self, name, table, data):
+    def __init__(self, name, table, data, timestamp=None):
         """
         Create a message.
 
         :param name: Name of the replication job.
         :param table: Name of the table.
         :param data: JSON-serializable row data.
+        :param timestamp: Optional timestamp override..
         """
-        self.timestamp = time.time()
+        self.timestamp = timestamp or time.time()
         self.name = name
         self.table = table
         self.data = data
@@ -60,3 +61,20 @@ class Message(object):
         :return: Bytes representing a checksum of a row's data.
         """
         return hashlib.sha256(json.dumps(dict(self.data), sort_keys=True)).hexdigest()
+
+    @staticmethod
+    def deserialize(message):
+        """
+        Deserialize a message.
+
+        :param message: Serializes message as a string/bytes.
+        :return: An instance of Message that represents the serialized input.
+        """
+        fields = json.loads(message)
+
+        return Message(
+            name=fields['name'],
+            table=fields['table'],
+            data=fields['data'],
+            timestamp=fields['timestamp'],
+        )
