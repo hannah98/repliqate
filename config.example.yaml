@@ -8,6 +8,7 @@ repliqate:
       uri: sqlite:////tmp/sysmetrics.db
       table: processes
       primary_key: id
+      limit: 100
       fields:
         - pid
         - name
