@@ -181,3 +181,4 @@ class ReplicationDaemon(object):
             with exec_timer.timer():
                 kv_closure.set(next_offset)
             self.metrics.emit_store_write(success=True, duration=exec_timer.duration())
+            self.metrics.emit_offset_position(table=self.sql_table, offset=next_offset)
