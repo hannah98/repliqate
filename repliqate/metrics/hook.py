@@ -48,6 +48,16 @@ class MetricsHook(object):
         """
         raise NotImplementedError
 
+    def emit_offset_position(self, table, offset):
+        """
+        Emit a gauge indicating the current SQL offset.
+
+        :param table: Name of the source SQL table.
+        :param offset: Integer offset of the primary key describing the current replication
+                       position.
+        """
+        raise NotImplementedError
+
 
 class NoopMetricsHook(MetricsHook):
     """
@@ -68,6 +78,9 @@ class NoopMetricsHook(MetricsHook):
         pass
 
     def emit_store_write(self, success, duration):
+        pass
+
+    def emit_offset_position(self, table, offset):
         pass
 
 
@@ -118,3 +131,8 @@ class StatsdMetricsHook(MetricsHook):
 
         self.statsd.count('store.write', 1, tags)
         self.statsd.timing('store.write_latency', duration, tags)
+
+    def emit_offset_position(self, table, offset):
+        tags = {'table': table}
+
+        self.statsd.gauge('offset.position', offset, tags)
