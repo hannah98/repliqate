@@ -2,7 +2,6 @@ configparser==3.7.1
 entrypoints==0.3
 enum34==1.1.6
 flake8==3.7.5
-functools32==3.2.3.post2
 kafka-python==1.4.4
 mccabe==0.6.1
 pycodestyle==2.5.0
