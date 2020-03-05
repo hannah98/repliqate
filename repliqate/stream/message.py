@@ -52,7 +52,7 @@ class Message(object):
             'data': dict(self.data),
             # Unique hash of the fetched data
             'hash': self._data_hash(),
-        },encoding="utf-8")
+        },ensure_ascii=True)
 
     def _data_hash(self):
         """
