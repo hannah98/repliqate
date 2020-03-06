@@ -60,7 +60,8 @@ class Message(object):
 
         :return: Bytes representing a checksum of a row's data.
         """
-        return hashlib.sha256(json.dumps(dict(self.data), sort_keys=True)).hexdigest()
+        return hashlib.sha256(json.dumps(dict(self.data), sort_keys=True).encode('utf-8')).hexdigest()
+        #return hashlib.sha256(json.dumps(dict(self.data), sort_keys=True)).hexdigest()
 
     @staticmethod
     def deserialize(message):
