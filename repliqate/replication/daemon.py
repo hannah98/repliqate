@@ -1,5 +1,6 @@
 import logging
 import time
+import traceback
 
 from repliqate.db.kv import KeyValueStoreClient
 from repliqate.db.sql import SQLDBClient
@@ -166,6 +167,8 @@ class ReplicationDaemon(object):
                     topic=self.kafka_topic,
                     duration=exec_timer.duration(),
                 )
+            except AssertionError: 
+                traceback.print_exc()
             except Exception as e:
                 self.logger.error('kafka publication failure: exception={}'.format(e))
                 self.logger.error(
